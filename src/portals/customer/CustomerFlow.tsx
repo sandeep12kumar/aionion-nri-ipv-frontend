@@ -12,7 +12,8 @@ import { STATUS_LABEL, useVideoCall } from '../../shared/video/useVideoCall';
 interface InviteInfo {
   referenceNo: string;
   scheduledAt: string;
-  phone: string;
+  // Masked, e.g. an•••@example.com
+  email: string;
 }
 
 interface CustomerState {
@@ -58,7 +59,7 @@ function Shell({ step, children }: { step?: number; children: ReactNode }) {
 }
 
 function OtpStep({ token, invite, onVerified }: { token: string; invite: InviteInfo; onVerified: () => void }) {
-  const [sent, setSent] = useState<{ sentTo: string; devOtp?: string } | null>(null);
+  const [sent, setSent] = useState<{ sentTo: string; emailed: boolean; devOtp?: string } | null>(null);
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +68,7 @@ function OtpStep({ token, invite, onVerified }: { token: string; invite: InviteI
     setBusy(true);
     setError(null);
     try {
-      setSent(await api<{ sentTo: string; devOtp?: string }>(`/customer/invite/${token}/otp`, { method: 'POST', token: null }));
+      setSent(await api<{ sentTo: string; emailed: boolean; devOtp?: string }>(`/customer/invite/${token}/otp`, { method: 'POST', token: null }));
       setOtp('');
     } catch (err) {
       setError(errorMessage(err));
@@ -102,16 +103,16 @@ function OtpStep({ token, invite, onVerified }: { token: string; invite: InviteI
       </p>
       <ErrorBanner message={error} />
       {!sent ? (
-        <Button className="w-full" busy={busy} onClick={send}>Send verification code to {invite.phone}</Button>
+        <Button className="w-full" busy={busy} onClick={send}>Email a verification code to {invite.email}</Button>
       ) : (
         <form onSubmit={verify} className="space-y-3">
           {sent.devOtp && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              Local testing mode, no SMS is sent. Your code is <strong className="tabular-nums">{sent.devOtp}</strong>
+              {sent.emailed ? 'Testing mode: the code was emailed, and is also shown here.' : 'Testing mode: no email is sent.'} Your code is <strong className="tabular-nums">{sent.devOtp}</strong>
             </div>
           )}
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-slate-600">6-digit code sent to {sent.sentTo}</span>
+            <span className="mb-1 block text-xs font-medium text-slate-600">6-digit code emailed to {sent.sentTo}</span>
             <input
               className="input text-center text-lg tracking-[0.4em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus
               value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
