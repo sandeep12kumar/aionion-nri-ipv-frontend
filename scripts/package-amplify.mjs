@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const frontendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const envFile = path.join(frontendDir, '.env.production');
 const settings = fs.existsSync(envFile) ? fs.readFileSync(envFile, 'utf8') : '';
-for (const name of ['VITE_API_URL', 'VITE_WS_URL']) {
+for (const name of ['VITE_API_URL']) {
   if (!new RegExp(`^${name}=\\S+`, 'm').test(settings)) {
     throw new Error(`Set ${name} in frontend/.env.production first (see .env.production.example).`);
   }

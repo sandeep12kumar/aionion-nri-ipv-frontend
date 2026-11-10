@@ -10,7 +10,6 @@ export default defineConfig({
     port: Number(process.env.APP_PORT || 5173),
     proxy: {
       '/api': api,
-      '/socket.io': { target: api, ws: true },
     },
   },
 });

@@ -1,5 +1,5 @@
 # Amplify build settings, used when Amplify builds this repository from GitHub.
-# Set VITE_API_URL and VITE_WS_URL under Amplify → Hosting → Environment variables.
+# Set VITE_API_URL under Amplify → Hosting → Environment variables.
 version: 1
 frontend:
   phases:

@@ -1,5 +1,5 @@
 // Two-way WebRTC call, using the "perfect negotiation" pattern. The call is set up through
-// openSignaling (Socket.IO locally, API Gateway WebSockets live). The video goes directly between browsers.
+// openSignaling, which passes messages through the normal API. The video goes directly between browsers.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { openSignaling, type SignalingChannel } from './signaling';
 
@@ -140,9 +140,11 @@ export function useVideoCall({ sessionId, token, localStream, onSessionEnded, on
 
     socket.on('connect', join);
     socket.on('connect_error', () => setStatus('reconnecting'));
-    socket.on('disconnect', (reason: string) => {
-      if (reason !== 'io client disconnect') setStatus('reconnecting');
-    });
+    socket.on('disconnect', () => setStatus('reconnecting'));
+    // The server is reachable again, or the other person is back. The call itself may never have dropped.
+    const reflectCall = () => setStatus(pc?.connectionState === 'connected' ? 'connected' : 'connecting');
+    socket.on('resume', reflectCall);
+    socket.on('peer:back', reflectCall);
     socket.on('peer:joined', () => createPeer());
     socket.on('peer:left', () => setStatus('peer-away'));
     socket.on('signal', (payload) => {
