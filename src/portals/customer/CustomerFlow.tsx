@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { CalendarClock, Camera, Check, CheckCircle2, CircleDot, FileText, Mic, MicOff, Video, VideoOff, Wifi } from 'lucide-react';
-import { api, clearCustomerToken, errorMessage, getCustomerToken, setCustomerToken } from '../../shared/api';
+import { api, apiUrl, clearCustomerToken, errorMessage, getCustomerToken, setCustomerToken } from '../../shared/api';
 import { Logo, ProductTitle } from '../../shared/Brand';
 import type { Consent, RequiredDocument, Session } from '../../shared/types';
 import { Button, ErrorBanner, formatDateTime, Loading, SuccessBanner } from '../../shared/ui';
@@ -177,7 +177,7 @@ function DeviceStep({ onDone }: { onDone: () => void }) {
         const samples: number[] = [];
         for (let i = 0; i < 3; i += 1) {
           const started = performance.now();
-          const response = await fetch('/api/health', { cache: 'no-store' });
+          const response = await fetch(apiUrl('/health'), { cache: 'no-store' });
           if (!response.ok) throw new Error('health check failed');
           samples.push(performance.now() - started);
         }
@@ -259,10 +259,10 @@ function DeviceStep({ onDone }: { onDone: () => void }) {
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${level}%` }} /></div>
         </li>
-        {check(latency !== null, <Wifi className="h-4 w-4" />, 'Network', networkFailed ? 'Could not reach the server' : latency !== null ? `${latency} ms to the server${latency > 500 ? ', this may be slow' : ''}` : 'Testing…')}
+        {check(latency !== null, <Wifi className="h-4 w-4" />, 'Network', networkFailed ? 'Could not measure the connection. You can still continue.' : latency !== null ? `${latency} ms to the server${latency > 500 ? ', this may be slow' : ''}` : 'Testing…')}
       </ul>
       <ErrorBanner message={error} />
-      <Button className="w-full" busy={busy} disabled={!cameraReady || !micReady || latency === null} onClick={proceed}>Continue to video call</Button>
+      <Button className="w-full" busy={busy} disabled={!cameraReady || !micReady || (latency === null && !networkFailed)} onClick={proceed}>Continue to video call</Button>
     </div>
   );
 }

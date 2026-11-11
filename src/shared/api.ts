@@ -29,6 +29,9 @@ export function clearStaffSession() {
 // Locally the API is on the same address (Vite forwards /api). Live, VITE_API_URL points at API Gateway.
 const API_BASE = `${(import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')}/api`;
 
+// The full address of an API path, for the rare call that doesn't go through api().
+export const apiUrl = (path: string) => `${API_BASE}${path}`;
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
