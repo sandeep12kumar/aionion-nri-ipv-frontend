@@ -97,10 +97,15 @@ function ConsentStep({ state, onDone }: { state: CustomerState; onDone: () => vo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getLocation = () => new Promise<GeolocationPosition | null>((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { timeout: 10000 });
-    return undefined;
+  // Location is required for the verification, so a refusal or failure stops here with a clear next step.
+  const getLocation = () => new Promise<GeolocationPosition>((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('This browser cannot share your location. Please use an up-to-date Chrome, Safari or Edge.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, (failure) => reject(new Error(failure.code === failure.PERMISSION_DENIED
+      ? 'Location access is blocked. Allow location for this site in your browser settings (the icon in the address bar), then try again.'
+      : 'We could not find your location. Turn on location services on your device, then try again.')), { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
   });
 
   async function submit(event: FormEvent) {
@@ -108,15 +113,15 @@ function ConsentStep({ state, onDone }: { state: CustomerState; onDone: () => vo
     setBusy(true);
     setError(null);
     try {
-      const position = checks.location ? await getLocation() : null;
+      const position = await getLocation();
       await api('/customer/consent', {
         token: getCustomerToken(),
         body: {
           dataProcessing: checks.dataProcessing,
           video: checks.video,
           recording: checks.recording,
-          location: checks.location && Boolean(position),
-          coords: position ? { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy } : null,
+          location: true,
+          coords: { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy },
         },
       });
       onDone();
@@ -127,7 +132,7 @@ function ConsentStep({ state, onDone }: { state: CustomerState; onDone: () => vo
   }
 
   const allRows: { key: keyof typeof checks; required: boolean }[] = [
-    { key: 'dataProcessing', required: true }, { key: 'video', required: true }, { key: 'recording', required: false }, { key: 'location', required: false },
+    { key: 'dataProcessing', required: true }, { key: 'video', required: true }, { key: 'recording', required: false }, { key: 'location', required: true },
   ];
   const rows = allRows.filter(({ key }) => state.consentText[key]);
 
@@ -154,7 +159,8 @@ function ConsentStep({ state, onDone }: { state: CustomerState; onDone: () => vo
         ))}
       </div>
       <ErrorBanner message={error} />
-      <Button type="submit" className="w-full" busy={busy} disabled={!checks.dataProcessing || !checks.video}>Agree and continue</Button>
+      {checks.location && !busy && !error && <p className="text-xs text-slate-500">Your browser will ask to share your location. Please choose Allow.</p>}
+      <Button type="submit" className="w-full" busy={busy} disabled={!checks.dataProcessing || !checks.video || !checks.location}>Agree and continue</Button>
     </form>
   );
 }
