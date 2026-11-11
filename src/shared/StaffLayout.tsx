@@ -17,7 +17,7 @@ const ADMIN_NAV = [
   { to: '/admin/applications', label: 'IPV requests', icon: FileText },
   { to: '/admin/users', label: 'Users and agents', icon: Users },
   { to: '/admin/audit', label: 'Audit logs', icon: History },
-  { to: '/admin/outbox', label: 'Local outbox', icon: Mail },
+  { to: '/admin/outbox', label: 'Messages', icon: Mail },
 ];
 
 const AGENT_NAV = [{ to: '/agent', label: 'My cases', icon: Briefcase, end: true }];

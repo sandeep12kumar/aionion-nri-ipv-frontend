@@ -330,7 +330,7 @@ export default function SessionRoom() {
             <KeyValues rows={[
               ['Scheduled', formatDateTime(session.scheduled_at)],
               ['Status', <StatusBadge key="s" status={session.status} />],
-              ['OTP verified', formatDateTime(session.otp_verified_at)],
+              ['Link opened', formatDateTime(session.link_opened_at)],
               ...(recordingOn ? [['Recording consent', consent ? (consent.recording ? 'Agreed' : 'Declined') : 'Not given yet'] as [string, string]] : []),
               ['Location', consent?.location && consent.latitude != null ? `${consent.latitude.toFixed(4)}, ${consent.longitude?.toFixed(4)}` : 'Not shared'],
               ['Agent', data.agent?.name],

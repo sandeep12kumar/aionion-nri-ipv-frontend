@@ -20,7 +20,7 @@ function QuickActions({ bundle, reload }: { bundle: ApplicationBundle; reload: (
   const [agents, setAgents] = useState<User[]>([]);
   const [agentId, setAgentId] = useState(app.assigned_agent_id ?? '');
   const [when, setWhen] = useState(app.session?.scheduled_at ? toLocalInput(app.session.scheduled_at) : '');
-  const [invite, setInvite] = useState<{ link: string; expiresAt: string } | null>(null);
+  const [invite, setInvite] = useState<InviteResult | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -83,7 +83,7 @@ function QuickActions({ bundle, reload }: { bundle: ApplicationBundle; reload: (
           <Button
             small variant="secondary" busy={busy === 'invite'} disabled={!canInvite}
             onClick={() => run('invite', async () => {
-              const result = await api<{ link: string; expiresAt: string }>(`/applications/${app.id}/invite`, { method: 'POST' });
+              const result = await api<InviteResult>(`/applications/${app.id}/invite`, { method: 'POST' });
               setInvite(result);
             })}
           >
@@ -94,8 +94,18 @@ function QuickActions({ bundle, reload }: { bundle: ApplicationBundle; reload: (
           )}
           {invite && (
             <div className="mt-3 rounded-lg border border-brand-200 bg-brand-50 p-3">
-              <p className="text-xs font-medium text-brand-900">Copy this link now. It is shown only once.</p>
-              <p className="mt-1 text-xs text-brand-900">No email or SMS gateway is connected, so send it to the customer yourself.</p>
+              {invite.emailed && (
+                <p className="flex items-start gap-1.5 text-xs font-medium text-emerald-800">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Emailed to {invite.emailedTo}, with the meeting time.
+                </p>
+              )}
+              {invite.emailError && (
+                <p className="text-xs font-medium text-amber-800">The email could not be sent: {invite.emailError}. Copy the link and send it yourself.</p>
+              )}
+              {!invite.emailed && !invite.emailError && (
+                <p className="text-xs text-brand-900">Email is not set up on the server, so send this link to the customer yourself.</p>
+              )}
+              <p className="mt-1 text-xs text-slate-600">The link is shown only once. Copy it now if you need to resend it by hand.</p>
               <input aria-label="Invitation link" readOnly value={invite.link} onFocus={(e) => e.target.select()} className="input mt-2 text-xs" />
               <Button
                 small variant="secondary" className="mt-2"
@@ -158,6 +168,14 @@ function AttemptPicker({ sessions, value, onChange }: { sessions: Session[]; val
       {sessions.map((s) => <option key={s.id} value={s.id}>Attempt {s.attempt_no} ({humanize(s.status)})</option>)}
     </select>
   );
+}
+
+interface InviteResult {
+  link: string;
+  expiresAt: string;
+  emailed: boolean;
+  emailedTo: string | null;
+  emailError: string | null;
 }
 
 export default function ApplicationDetail() {

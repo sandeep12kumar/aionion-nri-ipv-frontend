@@ -12,8 +12,7 @@ import { STATUS_LABEL, useVideoCall } from '../../shared/video/useVideoCall';
 interface InviteInfo {
   referenceNo: string;
   scheduledAt: string;
-  // Masked, e.g. an•••@example.com
-  email: string;
+  clientName: string;
 }
 
 interface CustomerState {
@@ -26,7 +25,7 @@ interface CustomerState {
   requiredDocuments: RequiredDocument[];
 }
 
-const STEPS = ['Verify', 'Consent', 'Device check', 'Video call'];
+const STEPS = ['Welcome', 'Consent', 'Device check', 'Video call'];
 
 function Shell({ step, children }: { step?: number; children: ReactNode }) {
   return (
@@ -58,36 +57,19 @@ function Shell({ step, children }: { step?: number; children: ReactNode }) {
   );
 }
 
-function OtpStep({ token, invite, onVerified }: { token: string; invite: InviteInfo; onVerified: () => void }) {
-  const [sent, setSent] = useState<{ sentTo: string; emailed: boolean; devOtp?: string } | null>(null);
-  const [otp, setOtp] = useState('');
+function WelcomeStep({ token, invite, onStarted }: { token: string; invite: InviteInfo; onStarted: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function send() {
+  async function start() {
     setBusy(true);
     setError(null);
     try {
-      setSent(await api<{ sentTo: string; emailed: boolean; devOtp?: string }>(`/customer/invite/${token}/otp`, { method: 'POST', token: null }));
-      setOtp('');
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function verify(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await api<{ token: string }>(`/customer/invite/${token}/otp/verify`, { body: { otp }, token: null });
+      const result = await api<{ token: string }>(`/customer/invite/${token}/start`, { method: 'POST', token: null });
       setCustomerToken(result.token);
-      onVerified();
+      onStarted();
     } catch (err) {
       setError(errorMessage(err));
-    } finally {
       setBusy(false);
     }
   }
@@ -95,33 +77,17 @@ function OtpStep({ token, invite, onVerified }: { token: string; invite: InviteI
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-semibold">Welcome</h1>
+        <h1 className="text-lg font-semibold">Welcome, {invite.clientName}</h1>
         <p className="mt-1 text-sm text-slate-600">You have been invited to complete a video verification for application {invite.referenceNo}.</p>
       </div>
-      <p className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-        <CalendarClock className="h-4 w-4 shrink-0 text-brand-600" /> {formatDateTime(invite.scheduledAt)}
-      </p>
+      <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        <p className="flex items-center gap-2">
+          <CalendarClock className="h-4 w-4 shrink-0 text-brand-600" /> {formatDateTime(invite.scheduledAt)}
+        </p>
+        <p className="mt-0.5 pl-6 text-xs text-slate-500">Shown in your own time zone</p>
+      </div>
       <ErrorBanner message={error} />
-      {!sent ? (
-        <Button className="w-full" busy={busy} onClick={send}>Email a verification code to {invite.email}</Button>
-      ) : (
-        <form onSubmit={verify} className="space-y-3">
-          {sent.devOtp && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              {sent.emailed ? 'Testing mode: the code was emailed, and is also shown here.' : 'Testing mode: no email is sent.'} Your code is <strong className="tabular-nums">{sent.devOtp}</strong>
-            </div>
-          )}
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-slate-600">6-digit code emailed to {sent.sentTo}</span>
-            <input
-              className="input text-center text-lg tracking-[0.4em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required autoFocus
-              value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-            />
-          </label>
-          <Button type="submit" className="w-full" busy={busy} disabled={otp.length !== 6}>Verify code</Button>
-          <Button variant="ghost" className="w-full" disabled={busy} onClick={send}>Send a new code</Button>
-        </form>
-      )}
+      <Button className="w-full" busy={busy} onClick={start}>Start verification</Button>
     </div>
   );
 }
@@ -434,7 +400,7 @@ export default function CustomerFlow() {
 
   if (!state) {
     if (!invite) return <Shell><Loading /></Shell>;
-    return <Shell step={0}><OtpStep token={token} invite={invite} onVerified={refresh} /></Shell>;
+    return <Shell step={0}><WelcomeStep token={token} invite={invite} onStarted={refresh} /></Shell>;
   }
 
   if (!state.consent) return <Shell step={1}><ConsentStep state={state} onDone={refresh} /></Shell>;

@@ -35,7 +35,7 @@ export interface Session {
   agent_remarks: string | null;
   invite_expires_at: string | null;
   invite_version: number;
-  otp_verified_at: string | null;
+  link_opened_at: string | null;
   consented_at: string | null;
   device_checked_at: string | null;
 }
@@ -172,6 +172,7 @@ export interface Notification {
   subject: string;
   body: string;
   status: string;
+  error?: string;
   created_at: string;
 }
 
